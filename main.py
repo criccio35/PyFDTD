@@ -21,49 +21,30 @@ def gaussianFunction(t, t0, spread):
 # ---- Problem definition -----------------------------------------------------
 
 L  = 20.0
-l1=(1./3.)*L    # grid change 1
-l2=(2./3.)*L    # grid change 2
+l1=6.5    # grid change 1
+l2=13.0    # grid change 2
 
 # -- CASO 1: Homogeneous variable grid -- #
-# dx0 = 0.05
-# dx_f = 4*dx0
-# dx1 = dx0*np.ones(int(l1/dx0))
-# dx2 = dx_f*np.ones(int((l2-l1)/dx_f))
-# dx3 = dx0*np.ones(int((L-l2)/dx0))
-# n2=dx2.size
+dx0 = 0.05
+dx_f = 4*dx0
+dx1 = dx0*np.ones(int(l1/dx0))
+dx2 = dx_f*np.ones(int((l2-l1)/dx_f))
+dx3 = dx0*np.ones(int((L-l2)/dx0))
+n2=dx2.size
 
 # -- CASO 2: variable grid with a function -- #
-dx0 = 0.05
-dx1 = dx0*np.ones(int(l1/dx0))      #homogeneous grid in [0,l1]
-dx3 = dx0*np.ones(int((L-l2)/dx0))  #homogeneous grid in [l2,L]
-  
-n2=100
-dmin = dx0     # dmin > 0
-dmax = 0.1      # dmax < l2-l1
-
+# dx0 = 0.05
+# dx1 = dx0*np.ones(int(l1/dx0))      #homogeneous grid in [0,l1]
+# dx3 = dx0*np.ones(int((L-l2)/dx0))  #homogeneous grid in [l2,L]
+#    
+# n2=70
+# dmin = dx0     # dmin > 0
+# dmax = 0.1      # dmax < l2-l1
+#  
 # x = np.linspace(0,1,num=n2, endpoint=True)
-# dx2 = eval('-4*(dmax-dmin)*x**2 + 4*(dmax-dmin)*x + dmax')
+# x = np.array(x)
+# dx2 = eval('-4*(dmax-dmin)*x**2 + 4*(dmax-dmin)*x + dmin')
 # dx2 = ((l2-l1)/sum(dx2))*dx2
-x = np.linspace(l1,l2,num=n2,endpoint=True)
-A = dmax / (dmin + ((l2-l1)**2)/2 )
-dx2 =-A*(x-l1)*(x-l2)+dmin  
- 
-plt.figure()
-plt.plot(x,dx2)
-plt.xlim(l1-dx0,l2+dx0)
-ax=plt.axes()
-ax.spines['bottom'].set_linewidth(2)
-ax.spines['left'].set_linewidth(2)
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-ax.yaxis.set_ticks([dmin, dmax])
-ax.yaxis.set_ticklabels(['$dx_{min}$', '$dx_{max}$'])
-ax.xaxis.set_ticks([l1, l2])
-ax.xaxis.set_ticklabels(['l1', 'l2'])
-ax.tick_params(labelsize=14)
-plt.plot(np.linspace(l1,l1+(l2-l1)/2.,10),np.ones(10)*dmax,'r--')
-plt.plot(np.linspace(l1,l2,10),np.ones(10)*dmin,'r--')
-plt.title('$y=-A(x-l_1)(x-l_2)+dx_{min} $')
 
 # ------------------------ ------------------------#
 n1=dx1.size     #number of nodes in [0,l1]
@@ -75,29 +56,25 @@ dx[0:n1]=dx1
 dx[n1:n1+n2]=dx2
 dx[n1+n2:N]=dx3
 
-#L = n1*dx0 + n2*dx_f + n3*dx0
-L = n1*dx0 + sum(dx2) + n3*dx0
-
 finalTime = L/c0*4
 cfl       = .99
 
 # Electric field grid
 gridE = np.zeros(N)
 gridE[0:n1]     = np.linspace(0,      l1,        num=n1, endpoint=True)
-gridE[n1:n1+n2] = l1*np.ones(n2) + cumsum(dx2)
+gridE[n1:n1+n2] = np.cumsum(dx2) + l1 
 gridE[n1+n2:N]  = np.linspace(l2,      L,        num=n3, endpoint=True)
 
+# Magnetic field grid --- gridH.size=gridE.size-1
+gridH = (gridE[0:gridE.size-1]+gridE[1:gridE.size])/2.
 
-# Magnetic field grid
-gridH2 = np.zeros(n2+1)
-gridH2[0:n2] = (l1-(dx0/2))*np.ones(n2) + cumsum(dx2)
-gridH2[n2] = gridH2[n2-1] + dx2[-1] # se anade uno mas para completar la malla
-
-gridH = np.zeros(N-1)
-gridH[0:n1-1]    = np.linspace(   dx0/2.0, l1-dx0/2.0, num=n1-1,   endpoint=True)
-gridH[n1-1:n1+n2]= gridH2
-gridH[n1+n2:N-1] = np.linspace(l2+dx0/2.0,  L-dx0/2.0, num=n3-1,   endpoint=True)
-
+# plt.figure()
+# plt.plot(l1*np.ones(3),range(0,3),'--',color='b')
+# plt.plot(l2*np.ones(3),range(0,3),'--',color='b')
+# plt.plot(gridE,np.ones(gridE.size),'o')
+# plt.plot(gridE[n1:n1+n2],1.05*np.ones(n2),'+',color='g')
+# plt.plot(gridH,np.ones(gridH.size),'*')
+#plt.xlim(l1,l2)
 
 plt.figure()
  
@@ -105,7 +82,6 @@ plt.plot(np.linspace(0,L,dx.size),dx)
 plt.xlabel('L')
 plt.ylabel('$dx$')
 plt.title('$dx$ size')
-
 
 #gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 #gridH = np.linspace(dx0/2.0, L-dx0/2.0, num=L/dx0,   endpoint=True)
@@ -213,10 +189,6 @@ for n in range(numberOfTimeSteps):
     hOld[:] = hNew[:]
     t += dt[n] #dt(indice)
 
-# --- guardar en ficheros
-#np.savetxt("PMC_E%d.txt" %(TAM), ErrorE)
-#np.savetxt("PMC_H%d.txt" %(TAM), ErrorH)
-
 tictoc = time.time() - tic;
 print('--- Processing finished ---')
 print("CPU Time: %f [s]" % tictoc)
@@ -278,16 +250,15 @@ for n in range(nSamples):
 plt.plot(probeTime[:]*1e9, Eexacta[0,:]) #exacta
 plt.title('Exacta vs Simulada')
  
-plt.figure()
-
-Error2=(Esim-Eexacta[0,:])**2
-Error=(Esim-Eexacta[0,:])
-savetxt("Errorm_%d.txt"%n2, (probeTime[:]*1e9,Error2))
-
-plt.plot(probeTime[:]*1e9, Error)
-plt.plot(probeTime[:]*1e9, Error2)
-plt.title('Error')
-
+# plt.figure()
+# 
+# Error2=(Esim-Eexacta[0,:])**2
+# Error=(Esim-Eexacta[0,:])
+# savetxt("Errorm_%d.txt"%n2, (probeTime[:]*1e9,Error2))
+# 
+# plt.plot(probeTime[:]*1e9, Error)
+# plt.plot(probeTime[:]*1e9, Error2)
+# plt.title('Error')
 
 plt.show()
 
